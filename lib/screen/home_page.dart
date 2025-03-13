@@ -1,67 +1,100 @@
 import 'package:flutter/material.dart';
-import '../providers/test_provider.dart';
-import '../models/test_model.dart';
-import 'test_page.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pocketbase/pocketbase.dart';
+import 'package:quiz_app/screen/test_page.dart';
+import '../servise/pocketbase_service.dart';
+import 'login_page.dart';
+import 'profile_page.dart';
+import 'settings_page.dart';
+import 'about_page.dart';
 
-class HomePage extends StatelessWidget {
+
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  Map<String, dynamic>? currentUser; // Данные пользователя
+
+  @override
+  void initState() {
+    super.initState();
+    // _checkAuth();
+  }
+Future<void> logout(BuildContext context) async {
+    await pocketBaseService.clearAuth();
+    print('logout');
+    context.go('/login');
+  }
+
+  void _checkAuth() {
+    if (!pocketBaseService.pb.authStore.isValid) {
+      // Если не авторизован, переходим на страницу входа
+      Future.microtask(() {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginPage()));
+      });
+    } else {
+      setState(() {
+        currentUser = pocketBaseService.pb.authStore.model;
+      });
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    List<Test> tests = TestProvider.getTests();
-
     return Scaffold(
-      appBar: AppBar(title: Text("Тестирование")),
+      appBar: AppBar(title: Text("Тесты")),
       drawer: Drawer(
         child: ListView(
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text("Меню", style: TextStyle(color: Colors.white, fontSize: 24)),
+              decoration: BoxDecoration(color: Colors.blueAccent),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(radius: 30, backgroundImage: AssetImage("assets/avatar.png")),
+                  SizedBox(height: 10),
+                  Text("Имя: ${currentUser?['username'] ?? 'Гость'}", style: TextStyle(color: Colors.white)),
+                  Text("Email: ${currentUser?['email'] ?? 'Нет данных'}", style: TextStyle(color: Colors.white70)),
+                ],
+              ),
             ),
             ListTile(
+              leading: Icon(Icons.person),
               title: Text("Профиль"),
-              onTap: () {},
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage()));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text("Настройки"),
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsPage()));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.info),
+              title: Text("О приложении"),
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => AboutPage()));
+              },
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.logout),
+              title: Text("Выход"),
+              onTap: ()=>logout(context),
             ),
           ],
         ),
       ),
-      body: ListView.builder(
-        itemCount: tests.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              child: ListTile(
-                contentPadding: EdgeInsets.all(16),
-                title: Text(
-                  tests[index].title,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                ),
-                subtitle: Text(
-                  tests[index].category,
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-                leading: Icon(Icons.quiz, color: Colors.blue, size: 40),
-                trailing: Icon(Icons.arrow_forward_ios, color: Colors.black54),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TestPage(test: tests[index]),
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        child: Icon(Icons.add, size: 30),
-      ),
+      body: Center(child: Text("Здесь будут тесты")),
+    
     );
   }
+  
 }
 
