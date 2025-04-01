@@ -44,7 +44,7 @@ class PocketBaseService {
           final userId =
               pb.authStore.token; // Extract user ID from token (if applicable)
           final record = await pb
-              .collection('sportly_users')
+              .collection('quizapp_users')
               .authRefresh(); // Refresh auth data
 
           userRecord =

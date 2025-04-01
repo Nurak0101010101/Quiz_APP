@@ -12,12 +12,14 @@ class _CreateTestPageState extends State<CreateTestPage> {
   String _selectedCategory = "Кругозор"; // Категория по умолчанию
   List<Question> _questions = [];
 
+  // Добавление нового вопроса
   void _addQuestion() {
     setState(() {
       _questions.add(Question(text: "", answers: ["", "", "", ""], correctAnswerIndex: 0));
     });
   }
 
+  // Сохранение теста
   void _saveTest() {
     if (_titleController.text.isEmpty || _questions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -32,7 +34,7 @@ class _CreateTestPageState extends State<CreateTestPage> {
       questions: _questions,
     );
 
-    Navigator.pop(context, newTest);
+    Navigator.pop(context, newTest); // Возвращаем новый тест
   }
 
   @override
@@ -44,11 +46,13 @@ class _CreateTestPageState extends State<CreateTestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Поле для ввода названия теста
             TextField(
               controller: _titleController,
               decoration: InputDecoration(labelText: "Название теста"),
             ),
             SizedBox(height: 10),
+            // Выбор категории
             DropdownButton<String>(
               value: _selectedCategory,
               onChanged: (value) {
@@ -61,6 +65,7 @@ class _CreateTestPageState extends State<CreateTestPage> {
                   .toList(),
             ),
             SizedBox(height: 10),
+            // Кнопка добавления вопроса
             ElevatedButton(
               onPressed: _addQuestion,
               child: Text("Добавить вопрос"),
@@ -73,6 +78,7 @@ class _CreateTestPageState extends State<CreateTestPage> {
                 },
               ),
             ),
+            // Кнопка сохранения теста
             ElevatedButton(
               onPressed: _saveTest,
               child: Text("Сохранить тест"),
@@ -83,6 +89,7 @@ class _CreateTestPageState extends State<CreateTestPage> {
     );
   }
 
+  // Карточка для каждого вопроса
   Widget _buildQuestionCard(int index) {
     return Card(
       margin: EdgeInsets.symmetric(vertical: 8),
@@ -90,6 +97,7 @@ class _CreateTestPageState extends State<CreateTestPage> {
         padding: const EdgeInsets.all(8),
         child: Column(
           children: [
+            // Ввод текста вопроса
             TextField(
               decoration: InputDecoration(labelText: "Вопрос"),
               onChanged: (value) {
@@ -101,6 +109,7 @@ class _CreateTestPageState extends State<CreateTestPage> {
               },
             ),
             SizedBox(height: 5),
+            // Ввод вариантов ответов
             Column(
               children: List.generate(4, (i) {
                 return TextField(
@@ -118,6 +127,7 @@ class _CreateTestPageState extends State<CreateTestPage> {
               }),
             ),
             SizedBox(height: 5),
+            // Выбор правильного ответа
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

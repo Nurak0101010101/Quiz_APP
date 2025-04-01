@@ -1,9 +1,9 @@
 import 'question_model.dart';
 
 class Test {
-  final String title; // Название теста
-  final String category; // Категория теста
-  final List<Question> questions; // Вопросы теста
+  final String title;
+  final String category;
+  final List<Question> questions;
 
   Test({
     required this.title,

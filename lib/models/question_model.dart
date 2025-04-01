@@ -1,7 +1,7 @@
 class Question {
-  final String text; // Текст вопроса
-  final List<String> answers; // Список ответов
-  final int correctAnswerIndex; // Индекс правильного ответа
+  final String text;
+  final List<String> answers;
+  final int correctAnswerIndex;
 
   Question({
     required this.text,
