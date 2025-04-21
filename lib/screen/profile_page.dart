@@ -13,7 +13,7 @@ class ProfilePage extends StatelessWidget {
             Center(
               child: CircleAvatar(
                 radius: 50,
-                backgroundImage: AssetImage("assets/avatar.png"), // Заглушка для аватара
+               backgroundImage: AssetImage("assets/avatar.png"), // Заглушка для аватара
               ),
             ),
             SizedBox(height: 20),

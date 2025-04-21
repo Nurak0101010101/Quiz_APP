@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import '../models/test_model.dart';
+import 'package:quiz_app/models/question.dart';
+import 'package:quiz_app/models/quiz.dart';
+import 'package:quiz_app/screen/result_page.dart';
 
 class TestPage extends StatefulWidget {
-  final Test test;
-  TestPage({required this.test});
+  final Quiz quiz;
+  final List<Question> questions;
+  
+  TestPage({required this.quiz, required this.questions});
 
   @override
   _TestPageState createState() => _TestPageState();
@@ -11,16 +15,81 @@ class TestPage extends StatefulWidget {
 
 class _TestPageState extends State<TestPage> {
   int _currentQuestionIndex = 0;
-  Map<int, int?> _answers = {}; // Ответы пользователя
+  Map<int, int?> _answers = {}; // User answers
+  bool _isLoading = false;
+  Map<String, List<dynamic>> _questionsWithAnswers = {};
+  int _secondsRemaining = 0;
+  bool _isTimerActive = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _initTimer();
+  }
+  
+  void _initTimer() {
+    if (widget.questions.isNotEmpty && widget.questions[_currentQuestionIndex].seconds > 0) {
+      _secondsRemaining = widget.questions[_currentQuestionIndex].seconds;
+      _startTimer();
+    }
+  }
+  
+  void _startTimer() {
+    _isTimerActive = true;
+    Future.delayed(Duration(seconds: 1), () {
+      if (!mounted) return;
+      
+      setState(() {
+        if (_secondsRemaining > 0) {
+          _secondsRemaining--;
+          _startTimer();
+        } else if (_isTimerActive) {
+          // Time's up, move to next question
+          _moveToNextQuestion();
+        }
+      });
+    });
+  }
+  
+  void _moveToNextQuestion() {
+    if (_currentQuestionIndex < widget.questions.length - 1) {
+      _isTimerActive = false;
+      setState(() {
+        _currentQuestionIndex++;
+        // Reset timer for new question
+        if (widget.questions[_currentQuestionIndex].seconds > 0) {
+          _secondsRemaining = widget.questions[_currentQuestionIndex].seconds;
+          _startTimer();
+        }
+      });
+    } else {
+      _isTimerActive = false;
+      _showResults();
+    }
+  }
+
+  @override
+  void dispose() {
+    _isTimerActive = false;
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    var question = widget.test.questions[_currentQuestionIndex];
-    double progress = (_currentQuestionIndex + 1) / widget.test.questions.length;
+    if (widget.questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.quiz.title)),
+        body: Center(child: Text("Тест не содержит вопросов")),
+      );
+    }
 
+    Question question = widget.questions[_currentQuestionIndex];
+    double progress = (_currentQuestionIndex + 1) / widget.questions.length;
+    List<dynamic> answers = question.answers ?? [];
+    
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.test.title),
+        title: Text(widget.quiz.title),
         backgroundColor: Colors.blueAccent,
       ),
       body: Padding(
@@ -28,7 +97,7 @@ class _TestPageState extends State<TestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Прогресс-бар
+            // Progress bar
             LinearProgressIndicator(
               value: progress,
               backgroundColor: Colors.grey[300],
@@ -36,27 +105,64 @@ class _TestPageState extends State<TestPage> {
               minHeight: 8,
             ),
             SizedBox(height: 16),
-            Text(
-              "Вопрос ${_currentQuestionIndex + 1} из ${widget.test.questions.length}",
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Вопрос ${_currentQuestionIndex + 1} из ${widget.questions.length}",
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+                if (_secondsRemaining > 0)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _secondsRemaining < 10 ? Colors.red : Colors.blue,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      "$_secondsRemaining сек",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
             ),
             SizedBox(height: 10),
+            
+            // Question text
             Text(
-              question.text,
+              question.title,
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
-
-            // Варианты ответов
+            SizedBox(height: 10),
+            
+            // Question image if available
+            if (question.img.isNotEmpty)
+              Container(
+                height: 200,
+                width: double.infinity,
+                margin: EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(question.img),
+                    fit: BoxFit.contain,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            
+            // Answer options
             Expanded(
-              child: ListView(
-                children: List.generate(question.answers.length, (index) {
+              child: ListView.builder(
+                itemCount: answers.length,
+                itemBuilder: (context, index) {
+                  final answer = answers[index];
                   return Card(
                     elevation: 3,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    margin: EdgeInsets.only(bottom: 8),
                     child: RadioListTile<int>(
                       title: Text(
-                        question.answers[index],
+                        answer['title'] ?? "Ответ ${index + 1}",
                         style: TextStyle(fontSize: 18),
                       ),
                       value: index,
@@ -68,20 +174,26 @@ class _TestPageState extends State<TestPage> {
                       },
                     ),
                   );
-                }),
+                },
               ),
             ),
 
-            // Кнопки "Назад" и "Далее"
+            // Navigation buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Кнопка "Назад"
+                // Back button
                 if (_currentQuestionIndex > 0)
                   ElevatedButton(
                     onPressed: () {
+                      _isTimerActive = false;
                       setState(() {
                         _currentQuestionIndex--;
+                        // Reset timer for previous question
+                        if (widget.questions[_currentQuestionIndex].seconds > 0) {
+                          _secondsRemaining = widget.questions[_currentQuestionIndex].seconds;
+                          _startTimer();
+                        }
                       });
                     },
                     child: Text("Назад"),
@@ -89,20 +201,28 @@ class _TestPageState extends State<TestPage> {
                       backgroundColor: Colors.grey,
                       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
-                  ),
+                  )
+                else
+                  SizedBox(width: 10),
 
-                // Кнопка "Далее" или "Завершить"
+                // Next/Finish button
                 ElevatedButton(
                   onPressed: () {
-                    if (_currentQuestionIndex < widget.test.questions.length - 1) {
+                    _isTimerActive = false;
+                    if (_currentQuestionIndex < widget.questions.length - 1) {
                       setState(() {
                         _currentQuestionIndex++;
+                        // Reset timer for new question
+                        if (widget.questions[_currentQuestionIndex].seconds > 0) {
+                          _secondsRemaining = widget.questions[_currentQuestionIndex].seconds;
+                          _startTimer();
+                        }
                       });
                     } else {
                       _showResults();
                     }
                   },
-                  child: Text(_currentQuestionIndex == widget.test.questions.length - 1 ? "Завершить" : "Далее"),
+                  child: Text(_currentQuestionIndex == widget.questions.length - 1 ? "Завершить" : "Далее"),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -116,68 +236,52 @@ class _TestPageState extends State<TestPage> {
     );
   }
 
-  // Окно с результатами
   void _showResults() {
     int correctAnswers = 0;
-    List<Widget> resultsList = [];
+    List<Map<String, dynamic>> resultData = [];
 
-    for (int i = 0; i < widget.test.questions.length; i++) {
-      bool isCorrect = _answers[i] == widget.test.questions[i].correctAnswerIndex;
+    for (int i = 0; i < widget.questions.length; i++) {
+      Question question = widget.questions[i];
+      List<dynamic> answers = question.answers ?? [];
+      
+      int? userAnswerIndex = _answers[i];
+      String userAnswerText = userAnswerIndex != null && userAnswerIndex < answers.length 
+          ? answers[userAnswerIndex]['title'] ?? "Не выбрано" 
+          : "Не выбрано";
+      
+      // Find correct answer
+      int correctIndex = -1;
+      String correctAnswerText = "Не найдено";
+      
+      for (int j = 0; j < answers.length; j++) {
+        if (answers[j]['isCorrect'] == true) {
+          correctIndex = j;
+          correctAnswerText = answers[j]['title'] ?? "Не найдено";
+          break;
+        }
+      }
+      
+      bool isCorrect = userAnswerIndex == correctIndex;
       if (isCorrect) correctAnswers++;
-
-      resultsList.add(
-        ListTile(
-          title: Text(
-            widget.test.questions[i].text,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Ваш ответ: ${_answers[i] != null ? widget.test.questions[i].answers[_answers[i]!] : "Не выбрано"}"),
-              Text("Правильный ответ: ${widget.test.questions[i].answers[widget.test.questions[i].correctAnswerIndex]}",
-                  style: TextStyle(color: Colors.green)),
-            ],
-          ),
-          trailing: Icon(
-            isCorrect ? Icons.check_circle : Icons.cancel,
-            color: isCorrect ? Colors.green : Colors.red,
-          ),
-        ),
-      );
+      
+      resultData.add({
+        "question": question.title,
+        "userAnswer": userAnswerText,
+        "correctAnswer": correctAnswerText,
+        "isCorrect": isCorrect
+      });
     }
 
-    double percentage = (correctAnswers / widget.test.questions.length) * 100;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Результат"),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                Text("Вы правильно ответили на $correctAnswers из ${widget.test.questions.length} вопросов."),
-                SizedBox(height: 8),
-                Text("Процент правильных ответов: ${percentage.toStringAsFixed(1)}%"),
-                SizedBox(height: 10),
-                Divider(),
-                Column(children: resultsList), // Показываем список вопросов с ответами
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: Text("Ок"),
-            ),
-          ],
-        );
-      },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResultPage(
+          questions: widget.questions,
+          results: resultData,
+          correctCount: correctAnswers,
+          totalCount: widget.questions.length,
+        ),
+      ),
     );
   }
 }
-

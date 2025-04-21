@@ -1,4 +1,3 @@
-
 import 'quiz.dart';
 
 class Question {
@@ -11,6 +10,7 @@ class Question {
   final String img;
   final int seconds;
   final Quiz? quiz;
+  List<dynamic>? answers; // Added field to store answer data
 
   Question({
     required this.id,
@@ -22,6 +22,7 @@ class Question {
     required this.img,
     required this.seconds,
     this.quiz,
+    this.answers,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -32,11 +33,12 @@ class Question {
       created: DateTime.parse(json['created']),
       updated: DateTime.parse(json['updated']),
       title: json['title'],
-      img: json['img'],
-      seconds: json['seconds'],
+      img: json['img'] ?? '',
+      seconds: json['seconds'] ?? 0,
       quiz: json['expand'] != null && json['expand']['quiz'] != null
           ? Quiz.fromJson(json['expand']['quiz'])
           : null,
+      answers: json['answers'], // This might be null initially
     );
   }
 
@@ -51,6 +53,7 @@ class Question {
       'img': img,
       'seconds': seconds,
       'expand': quiz != null ? {'quiz': quiz!.toJson()} : null,
+      'answers': answers,
     };
   }
 }
